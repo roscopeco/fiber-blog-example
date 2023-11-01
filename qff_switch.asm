@@ -29,7 +29,7 @@ _qff_switch_fiber:
     test    rsi,rsi                             ; Is it null?
     jz      .do_switch                          ; If so, skip this next bit...
 
-    ; Save CPU flags and registers in outgoing fiber's stack
+    ; Save CPU registers in outgoing fiber's stack
     ;
     ; In the real world, there'd be more to save than this. The CPU has a
     ; whole bunch of registers for floating point, SSE, and all that other 
