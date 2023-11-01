@@ -5,7 +5,7 @@
 void task1(void) {
     for (int i = 0; i < 3; i++) {
         printf("Task 1 - i is %d\n", i);
-        usleep(500);
+        usleep(500000);
         qff_yield();
         printf("  --> yielded back to 1\n");
     }
@@ -16,7 +16,7 @@ void task1(void) {
 void task2(void) {
     for (int i = 0; i < 5; i++) {
         printf("Task 2 - i is %d\n", i);
-        usleep(500);
+        usleep(500000);
         qff_yield();
         printf("  --> yielded back to 2\n");
     }
@@ -30,5 +30,5 @@ void init(void) {
 }
 
 int main(void) {
-    qff_start(init);
+    qff_run(init);
 }
