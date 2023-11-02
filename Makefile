@@ -8,7 +8,7 @@ ARCH?=macho64
 
 all: main
 
-main: main.o qff.o qff_switch.o
+main: main.o list.o qff.o qff_switch.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
 clean:

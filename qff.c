@@ -6,23 +6,35 @@
  * Copyright (c) 2023 Ross Bamford
  * MIT License (see LICENSE.md)
  */
-#include "qff.h"
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "list.h"
+#include "qff.h"
+
 // This struct holds just enough information about our fibers
 // to be able to switch to them, and to clean up when they're done...
 typedef struct {
+    Node            node;
     uintptr_t*      sp;
     uintptr_t*      stack_bottom;
-    bool            active;
 } QffFiber;
 
-static QffFiber* fibers[2];
-static int next_fiber;
+// This List holds our runnable queue.
+//
+// Selecting a fiber to run just involves popping it from the head
+// of this list. When it yields, it is pushed to the tail.
+//
+// Fibers that complete before yielding are never re-added to this
+// queue. When the queue is empty, the system exits.
+//
+// In the real world, you might have multiple of these (for different
+// priorities etc). There might also be queues for fibers that are 
+// blocked etc.
+//
+static List *runnable_queue;
 
 // The init_fiber is special - it represents "the continuation of the
 // anonymous fiber that was running when the program started".
@@ -103,7 +115,6 @@ void qff_dump_f(QffFiber *fiber) {
     printf("Current task is 0x%016lx\n", (uintptr_t)fiber);
     printf("  stack @ 0x%016lx\n", (uintptr_t)fiber->stack_bottom);
     printf("  sp    @ 0x%016lx\n", (uintptr_t)fiber->sp);
-    printf("  act   = %s", fiber->active ? "true" : "false");
     printf("\n");
 }
 
@@ -121,8 +132,14 @@ void qff_dump(void) {
  * can go on with your life.
  */
 void qff_run(qff_task init) {
+    runnable_queue = malloc(sizeof(List));
+    list_init(runnable_queue);
+
     init();
     qff_yield();
+
+    list_free(runnable_queue);
+    free(runnable_queue);
 }
 
 /*
@@ -132,14 +149,11 @@ void qff_run(qff_task init) {
  *
  * You can call this from your init fiber, or from any other fiber.
  * 
- * Or really from anywhere you like to be fair, I'm not picky... 😅
+ * Don't call it outside the context of `qff_run` though 💣💥
  */
 void qff_schedule(qff_task fiber_func) {  
     // We need a fiber struct to keep track of this - allocate one!  
     QffFiber *fiber = malloc(sizeof(QffFiber));
-
-    // Let's set that struct up...
-    fiber->active = true;
 
     // We need to allocate a stack for this fiber.
     //
@@ -171,9 +185,8 @@ void qff_schedule(qff_task fiber_func) {
     *--fiber->sp = (uintptr_t)fiber_func;
     fiber->sp -= 6;
     
-    // Add the new fiber to the "run queue".
-    fibers[next_fiber] = fiber;
-    next_fiber = (next_fiber + 1) & 1;
+    // Add the new fiber to the end of the run queue.
+    list_add_tail(runnable_queue, (Node*)fiber);
 }
 
 /*
@@ -183,26 +196,28 @@ void qff_schedule(qff_task fiber_func) {
  * likely to happen 👻...
  */
 void qff_yield(void) {
-    while (true) {
-        int switch_to = next_fiber;
-        next_fiber = (next_fiber + 1) & 1;
-        QffFiber *next = fibers[switch_to];
-
-        bool any = false;
-        for (int i = 0; i < 2; i++) {
-            if (fibers[i]->active) {
-                any = true;
-            }
-        }
-
-        if (!any) {
+    if (list_empty(runnable_queue)) {
+        if (!qff_current_fiber) {
+            // We don't have anything runnable, and there's no current fiber - game over
+            //
+            // In this case, we switch back to the "init fiber", which is the continuation
+            // of the computation that made the first call to `qff_yield`.
+            //
+            // The result will be returning from that call (and the `qff_run` that kicked
+            // us off in the first place).
+            //
             qff_switch_fiber(&init_fiber);
-            break;
+        } else {
+            // We don't have anything runnable, but there is a current fiber - just continue that
+            return;
         }
+    } else {
+        // There's more runnable things!
+        if (qff_current_fiber && qff_current_fiber != &init_fiber) {
+            // We're running a fiber already, and it wants to yield - send it to the back of the queue
+            list_add_tail(runnable_queue, (Node*)qff_current_fiber);
+        } 
 
-        if (next->active) {
-            qff_switch_fiber(next);
-            break;
-        }
+        qff_switch_fiber((QffFiber*)list_pop_head(runnable_queue));
     }
 }

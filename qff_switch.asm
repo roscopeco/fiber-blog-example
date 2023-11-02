@@ -12,6 +12,7 @@
     extern  _qff_current_fiber                  ; Import the `gff_current_fiber` variable
     section .text                               ; Stick all this in the `.text` section 📚
 
+%define QFF_SP  16                              ; Offset of the stack pointer in a QffFiber struct
 
 ; This is really the main bit of this example, and what the blog post 
 ; is all about. 
@@ -56,11 +57,11 @@ _qff_switch_fiber:
     push    r15
 
     ; Switch stacks
-    mov     [rsi],rsp                           ; Save the current stack pointer in the fiber struct
+    mov     [rsi+QFF_SP],rsp                    ; Save the current stack pointer in the fiber struct
 
-.do_switch
+.do_switch:
     mov     [_qff_current_fiber],rdi            ; Load the new fiber argument into the current fiber pointer
-    mov     rsp,[rdi]                           ; And switch to the new fiber's stack
+    mov     rsp,[rdi+QFF_SP]                    ; And switch to the new fiber's stack
 
     ; Restore registers from new fiber's stack
     ;
