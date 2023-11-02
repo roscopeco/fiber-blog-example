@@ -8,10 +8,8 @@ UNAME_P := $(shell uname -p)
 ifeq ($(UNAME_S),Darwin)
 	OBJFMT = macho64
 ifneq ($(filter arm%,$(UNAME_P)),)
-	ARCH_LDFLAGS = -arch x86_64 -L$(shell xcrun -sdk macosx --show-sdk-path) -lSystem
+	ARCH_LDFLAGS = -arch x86_64
 	ARCH_CFLAGS = -arch x86_64
-else
-	ARCH_LDFLAGS = -L$(shell xcrun -sdk macosx --show-sdk-path)/usr/lib  -lSystem
 endif
 else
 ifeq ($(UNAME_P),x86_64)
@@ -24,7 +22,7 @@ endif
 all: main
 
 main: main.o list.o qff.o qff_switch.o
-	$(LD) $(LDFLAGS) -o $@ $^
+	$(CC) $(LDFLAGS) -o $@ $^
 
 clean:
 	rm -rf *.o main
