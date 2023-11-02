@@ -2,29 +2,20 @@ CFLAGS=-Iinclude -Wall -Wextra -Werror -Wpedantic -std=c17 -g $(ARCH_CFLAGS)
 ASFLAGS=-f$(OBJFMT) -g
 LDFLAGS=$(ARCH_LDFLAGS)
 NASM?=nasm
-ARCH_LDFLAGS?=-arch x86_64
-ARCH_CFLAGS?=-arch x86_64
-HOST_OS:=`uname`
-HOST_ARCH:=`uname -p`
 
 UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
-ifneq ($(filter %86,$(UNAME_P)),)
-	$(error x86 is not supported at all)
-endif
-ifeq ($(UNAME_S),Linux)
+ifeq ($(UNAME_S),Darwin)
+	OBJFMT = macho64
 ifneq ($(filter arm%,$(UNAME_P)),)
-	$(error ARM is not supported on Linux)
+	ARCH_LDFLAGS = -arch x86_64 -L$(shell xcrun -sdk macosx --show-sdk-path) -lSystem
+	ARCH_CFLAGS = -arch x86_64
+else
+	ARCH_LDFLAGS = -L$(shell xcrun -sdk macosx --show-sdk-path)/usr/lib  -lSystem
 endif
+else
 ifeq ($(UNAME_P),x86_64)
 	OBJFMT = elf64
-endif
-endif
-ifeq ($(UNAME_S),Darwin)
-ifneq ($(filter arm%,$(UNAME_P)),)
-	OBJFMT = macho64
-	ARCH_LDFLAGS = -arch x86_64
-	ARCH_CFLAGS = -arch x86_64
 endif
 endif
 
@@ -33,7 +24,7 @@ endif
 all: main
 
 main: main.o list.o qff.o qff_switch.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(LD) $(LDFLAGS) -o $@ $^
 
 clean:
 	rm -rf *.o main
