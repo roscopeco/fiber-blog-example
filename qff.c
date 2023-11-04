@@ -14,6 +14,9 @@
 #include "list.h"
 #include "qff.h"
 
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+
 // This struct holds just enough information about our fibers
 // to be able to switch to them, and to clean up when they're done...
 typedef struct {
@@ -196,8 +199,8 @@ void qff_schedule(qff_task fiber_func) {
  * likely to happen 👻...
  */
 void qff_yield(void) {
-    if (list_empty(runnable_queue)) {
-        if (!qff_current_fiber) {
+    if (unlikely(list_empty(runnable_queue))) {
+        if (unlikely(!qff_current_fiber)) {
             // We don't have anything runnable, and there's no current fiber - game over
             //
             // In this case, we switch back to the "init fiber", which is the continuation
@@ -213,7 +216,7 @@ void qff_yield(void) {
         }
     } else {
         // There's more runnable things!
-        if (qff_current_fiber && qff_current_fiber != &init_fiber) {
+        if (likely(qff_current_fiber && qff_current_fiber != &init_fiber)) {
             // We're running a fiber already, and it wants to yield - send it to the back of the queue
             list_add_tail(runnable_queue, (Node*)qff_current_fiber);
         } 
