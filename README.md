@@ -13,13 +13,19 @@ eschews error handling in favour of clarity.
 That said, it _does_ work, and it should be fairly easy to add
 those things in if you wanted to 🙂
 
+> **Note**: If you're following along with the code in the post 
+  series, you'll notice the naming is slightly different - the
+  prefix `qff_` has been added to a lot of things. This is to 
+  avoid namespace collisions and make the code easier to use 
+  with other libraries.
+
 ### Building
 
 > **Note**: Although this is written in x86_64 assembly for broad 
-applicability and ease of understanding, it _does_ work on M1 
-(or 2, or 3 I guess) thanks to Rosetta. You _will_ however need 
-to install Nasm - it's available via `brew` but you _might_ need
-to install an x86 version of brew alongside your regular arm64 one.
+  applicability and ease of understanding, it _does_ work on M1 
+  (or 2, or 3 I guess) thanks to Rosetta. You _will_ however need 
+  to install Nasm - it's available via `brew` but you _might_ need
+  to install an x86 version of brew alongside your regular arm64 one.
 
 You will need a recent(ish) platform compiler. Tested with Clang
 on macOS and GCC on Linux.
